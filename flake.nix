@@ -35,6 +35,7 @@
               name = system;
               value = import nixpkgs {
                 inherit system;
+                config.allowUnfree = true;
                 overlays = [ inputs.self.overlays.default ];
               };
             }
@@ -47,9 +48,18 @@
       };
 
       perSystem =
-        { config, pkgs, ... }:
+        {
+          config,
+          pkgs,
+          system,
+          ...
+        }:
         let
-          packages = import ./pkgs { inherit pkgs; };
+          packagePkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          packages = import ./pkgs { pkgs = packagePkgs; };
           update = pkgs.writeShellApplication {
             name = "update-packages";
             runtimeInputs = [ pkgs.python3 ];
