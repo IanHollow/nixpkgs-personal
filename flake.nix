@@ -18,32 +18,30 @@
       treefmt-nix,
       ...
     }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [
+    let
+      supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
+      personalOverlay = _final: prev: import ./pkgs { pkgs = prev; };
+    in
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = supportedSystems;
 
       imports = [ treefmt-nix.flakeModule ];
 
       flake = {
-        overlays.default = final: _prev: import ./pkgs { pkgs = final; };
+        overlays.default = personalOverlay;
         legacyPackages = builtins.listToAttrs (
-          map
-            (system: {
-              name = system;
-              value = import nixpkgs {
-                inherit system;
-                config.allowUnfree = true;
-                overlays = [ inputs.self.overlays.default ];
-              };
-            })
-            [
-              "x86_64-linux"
-              "aarch64-linux"
-              "aarch64-darwin"
-            ]
+          map (system: {
+            name = system;
+            value = import nixpkgs {
+              inherit system;
+              config.allowUnfree = true;
+              overlays = [ personalOverlay ];
+            };
+          }) supportedSystems
         );
       };
 

@@ -9,9 +9,7 @@ let
   pname = "ttf-ms-win11-auto";
   source = import ./source.nix;
 
-  src = fetchurl {
-    inherit (source.src) url hash;
-  };
+  src = fetchurl { inherit (source.src) url hash; };
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   inherit pname src;
