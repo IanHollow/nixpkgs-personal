@@ -21,6 +21,9 @@ jobs:
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - run: nix fmt -- --fail-on-change
+      - run: nix develop -c deadnix --fail .
+      - run: nix develop -c statix check .
+      - run: nix develop -c actionlint .github/workflows/*.yml
       - run: nix develop -c ruff format --check .
       - run: nix develop -c ruff check .
       - run: nix develop -c ty check
