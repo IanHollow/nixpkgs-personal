@@ -30,20 +30,20 @@
       flake = {
         overlays.default = final: _prev: import ./pkgs { pkgs = final; };
         legacyPackages = builtins.listToAttrs (
-          map (
-            system: {
+          map
+            (system: {
               name = system;
               value = import nixpkgs {
                 inherit system;
                 config.allowUnfree = true;
                 overlays = [ inputs.self.overlays.default ];
               };
-            }
-          ) [
-            "x86_64-linux"
-            "aarch64-linux"
-            "aarch64-darwin"
-          ]
+            })
+            [
+              "x86_64-linux"
+              "aarch64-linux"
+              "aarch64-darwin"
+            ]
         );
       };
 
@@ -69,7 +69,7 @@
           };
         in
         {
-          packages = packages;
+          inherit packages;
           apps.update = {
             type = "app";
             program = "${update}/bin/update-packages";

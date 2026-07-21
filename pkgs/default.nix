@@ -1,6 +1,6 @@
 { pkgs }:
 let
-  callPackage = pkgs.callPackage;
+  inherit (pkgs) callPackage;
   darwinArmPackages = {
     claude-desktop = callPackage ./by-name/cl/claude-desktop/package.nix { };
     libreoffice = callPackage ./by-name/li/libreoffice/package.nix { };

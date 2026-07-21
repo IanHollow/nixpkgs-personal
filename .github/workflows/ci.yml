@@ -1,18 +1,14 @@
 name: CI
-
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
-
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   lint:
     name: Lint
@@ -29,7 +25,6 @@ jobs:
       - run: nix develop -c ruff check .
       - run: nix develop -c ty check
       - run: nix develop -c zizmor .github/workflows
-
   flake:
     name: Flake checks
     runs-on: ubuntu-24.04
@@ -42,7 +37,6 @@ jobs:
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
       - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - run: nix flake check --all-systems --no-build
-
   build:
     name: Build (${{ matrix.system }})
     needs: [lint, flake]
