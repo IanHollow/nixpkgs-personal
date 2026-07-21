@@ -1,0 +1,27 @@
+[tool.ruff]
+preview = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["line-too-long"]
+
+[tool.ruff.format]
+line-ending = "lf"
+preview = true
+
+[tool.ty.environment]
+python-platform = "all"
+
+[tool.ty.src]
+include = ["**/*.py", "**/*.pyi"]
+exclude = [
+  ".git",
+  ".direnv",
+  ".ruff_cache",
+  "**/__pycache__",
+  "result",
+]
+
+[tool.ty.terminal]
+error-on-warning = true
+output-format = "concise"

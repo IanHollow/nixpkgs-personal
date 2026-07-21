@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - run: nix fmt -- --fail-on-change
+      - run: nix develop -c ruff format --check .
+      - run: nix develop -c ruff check .
+      - run: nix develop -c ty check
+      - run: nix develop -c zizmor .github/workflows
+
+  flake:
+    name: Flake checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - run: nix flake check --all-systems --no-build
+
+  build:
+    name: Build (${{ matrix.system }})
+    needs: [lint, flake]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - system: aarch64-darwin
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - name: Build affected packages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SYSTEM: ${{ matrix.system }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            changed_files=$(git ls-files)
+          else
+            changed_files=$(git diff --name-only "$BASE_SHA" HEAD)
+          fi
+
+          all_packages=$(nix eval --json ".#packages.$SYSTEM" --apply builtins.attrNames | jq -r '.[]')
+          if grep -qv '^pkgs/by-name/' <<<"$changed_files"; then
+            targets="$all_packages"
+          else
+            targets=$(sed -nE 's#^pkgs/by-name/[^/]+/([^/]+)/.*#\1#p' <<<"$changed_files" | sort -u)
+            targets=$(comm -12 <(sort <<<"$targets") <(sort <<<"$all_packages"))
+          fi
+
+          if [[ -z "$targets" ]]; then
+            echo "No packages for $SYSTEM were affected."
+            exit 0
+          fi
+
+          while IFS= read -r package; do
+            [[ -n "$package" ]] || continue
+            nix build ".#$package" --print-build-logs
+          done <<<"$targets"
