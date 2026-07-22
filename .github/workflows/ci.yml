@@ -77,11 +77,13 @@ jobs:
           fi
 
           all_packages=$(nix eval --json ".#packages.$SYSTEM" --apply builtins.attrNames | jq -r '.[]')
-          if grep -qv '^pkgs/by-name/' <<<"$changed_files"; then
+          if grep -qE '^(flake\.nix|flake\.lock|pkgs/default\.nix)$' <<<"$changed_files"; then
             targets="$all_packages"
-          else
+          elif grep -q '^pkgs/by-name/' <<<"$changed_files"; then
             targets=$(sed -nE 's#^pkgs/by-name/[^/]+/([^/]+)/.*#\1#p' <<<"$changed_files" | sort -u)
             targets=$(comm -12 <(sort <<<"$targets") <(sort <<<"$all_packages"))
+          else
+            targets=""
           fi
 
           if [[ -z "$targets" ]]; then
