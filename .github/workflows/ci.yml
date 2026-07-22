@@ -61,7 +61,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - if: matrix.system != 'aarch64-darwin'
+        uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
       - name: Build affected packages
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
