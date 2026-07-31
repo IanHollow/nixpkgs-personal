@@ -1,8 +1,8 @@
 {
-  version = "26.715.72359";
+  version = "26.721.41059";
   appName = "ChatGPT";
   src = {
-    url = "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-26.715.72359.zip";
-    hash = "sha256-u1mbwiMxvrtsqF6OlJNDOkldRPRh787ePnBU8yawR+8=";
+    url = "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-26.721.41059.zip";
+    hash = "sha256-4rRQVvPR+KuQ9/FiSb+1pA0J0PgJnxLKDY16j9+RCM4=";
   };
 }
