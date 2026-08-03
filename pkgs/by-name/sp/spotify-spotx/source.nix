@@ -10,7 +10,7 @@
   spotx = {
     owner = "SpotX-Official";
     repo = "SpotX-Bash";
-    rev = "38c1844f2811f344e83cf494c70a8f23d3532d12";
-    hash = "sha256-Y0/WYE9mUvhAKOsTE9Ap3GhVDgM+kfUTmiY4rj8b1eY=";
+    rev = "03207b611740fc889d050d7a2dbd3bdddd30bd98";
+    hash = "sha256-uQHYVrp1N/w4gKz5Magz3tvZBXttswDedF1wTwNdZuQ=";
   };
 }

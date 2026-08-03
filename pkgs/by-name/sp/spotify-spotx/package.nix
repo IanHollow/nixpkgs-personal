@@ -66,7 +66,10 @@ stdenvNoCC.mkDerivation {
     install -d "$HOME"
     export PATH="$fakeBin:$PATH:/usr/bin:/bin:/usr/sbin:/sbin"
 
-    bash ${spotxSrc}/spotx.sh \
+    spotxScript="$TMPDIR/spotx.sh"
+    sed 's|/usr/bin/xattr|true|g' ${spotxSrc}/spotx.sh > "$spotxScript"
+
+    bash "$spotxScript" \
       --force \
       --blockupdates \
       --premium \
