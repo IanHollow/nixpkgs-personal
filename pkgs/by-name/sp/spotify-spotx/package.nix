@@ -61,12 +61,24 @@ stdenvNoCC.mkDerivation {
     install -d "$fakeBin"
     printf '%s\n' '#!/bin/sh' 'exit 1' > "$fakeBin/curl"
     chmod +x "$fakeBin/curl"
+    cat > "$fakeBin/xattr" <<'EOF'
+    #!/bin/sh
+    if [ "$#" -eq 2 ] && [ "$1" = "-cr" ]; then
+      exit 0
+    fi
+    printf 'unsupported xattr invocation: %s\n' "$*" >&2
+    exit 1
+    EOF
+    chmod +x "$fakeBin/xattr"
 
     export HOME="$TMPDIR/home"
     install -d "$HOME"
     export PATH="$fakeBin:$PATH:/usr/bin:/bin:/usr/sbin:/sbin"
 
-    bash ${spotxSrc}/spotx.sh \
+    spotxScript="$TMPDIR/spotx.sh"
+    sed 's|/usr/bin/xattr|xattr|g' ${spotxSrc}/spotx.sh > "$spotxScript"
+
+    bash "$spotxScript" \
       --force \
       --blockupdates \
       --premium \
