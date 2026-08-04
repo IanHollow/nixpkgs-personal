@@ -43,17 +43,27 @@ jobs:
       - run: nix develop --command prek run --all-files
       - run: nix develop --command gitleaks detect --source . --redact --config=.gitleaks.toml
   flake:
-    name: Flake checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    name: Flake checks (${{ matrix.system }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - system: aarch64-darwin
+            runner: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
-      - run: nix flake check --keep-going --show-trace --print-build-logs --no-build --all-systems
+      - run: nix flake check --keep-going --show-trace --print-build-logs --no-build --system "${{ matrix.system }}"
   build:
     name: Build (${{ matrix.system }})
     needs: [lint, flake]
