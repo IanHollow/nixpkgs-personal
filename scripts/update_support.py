@@ -17,6 +17,26 @@ HTTPS_CERT_CANDIDATES: Final = (
 )
 
 
+def github_api_headers(user_agent: str) -> dict[str, str]:
+    """Return standard GitHub API headers with optional token auth.
+
+    ``GH_TOKEN`` is used by the GitHub CLI and package-update workflow;
+    ``GITHUB_TOKEN`` is supported as the native Actions equivalent.  The
+    unauthenticated fallback keeps local updates usable when no GitHub
+    credentials are configured, while authenticated runs avoid low API rate
+    limits.
+    """
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": user_agent,
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def https_context() -> ssl.SSLContext:
     """Return an SSL context using the first readable CA bundle.
 

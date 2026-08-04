@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from scripts.update_support import HTTPS_CONTEXT
+from scripts.update_support import HTTPS_CONTEXT, github_api_headers
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -81,11 +81,7 @@ def _fetch_json(url: str, *, label: str, timeout: int = 30) -> object:
     try:
         request = Request(
             url,
-            headers={
-                "Accept": "application/vnd.github+json",
-                "User-Agent": HTTP_USER_AGENT,
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
+            headers=github_api_headers(HTTP_USER_AGENT),
         )
         with urlopen(request, timeout=timeout, context=HTTPS_CONTEXT) as response:
             return json.load(response)

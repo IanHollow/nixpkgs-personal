@@ -6,24 +6,30 @@ on:
 concurrency:
   group: package-updates
   cancel-in-progress: false
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 jobs:
   update:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
-      - name: Update pinned sources
-        run: nix develop -c python scripts/update-packages.py --all
-      - name: Create an auto-merge pull request
+      - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+      - name: Configure GitHub CLI authentication
         env:
           GH_TOKEN: ${{ github.token }}
+        run: gh auth setup-git
+      - name: Update pinned sources
+        run: nix develop --command python scripts/update-packages.py --all --keep-going
+      - name: Create or update the auto-merge pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -32,12 +38,22 @@ jobs:
             exit 0
           fi
 
-          branch="automation/package-updates-$(date -u +%F)"
+          branch="automation/package-updates"
+          git fetch origin "$branch" || true
+          git switch --force-create "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$branch"
           git add pkgs scripts
           git commit -m "maint: update package sources"
-          git push --set-upstream "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
-          pr_url=$(gh pr create --base main --head "$branch" --title "maint: update package sources" --body "Automated package source updates.")
-          gh pr merge "$pr_url" --auto --squash
+          git push --force-with-lease --set-upstream origin "$branch"
+
+          pr_url=$(gh pr list --repo "$REPOSITORY" --head "$branch" --state open --json url --jq '.[0].url')
+          if [[ -z "$pr_url" ]]; then
+            pr_url=$(gh pr create \
+              --repo "$REPOSITORY" \
+              --base main \
+              --head "$branch" \
+              --title "maint: update package sources" \
+              --body "Automated package source updates.")
+          fi
+          gh pr merge "$pr_url" --repo "$REPOSITORY" --auto --squash --delete-branch
