@@ -19,13 +19,12 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.update_support import HTTPS_CONTEXT
+from scripts.update_support import HTTPS_CONTEXT, github_api_headers
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-GITHUB_API_VERSION = "2022-11-28"
 HTTP_USER_AGENT = "nix-conf-updater/1.0 (+https://github.com/NixOS/nixpkgs)"
 REVISION_PATTERN = re.compile(r"[0-9a-f]{40}")
 SOURCE_PATTERN = re.compile(
@@ -47,11 +46,7 @@ def _fetch_latest_commit(owner: str, repo: str) -> tuple[str, date]:
     url = f"https://api.github.com/repos/{owner}/{repo}/commits/main"
     request = Request(
         url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": HTTP_USER_AGENT,
-            "X-GitHub-Api-Version": GITHUB_API_VERSION,
-        },
+        headers=github_api_headers(HTTP_USER_AGENT),
     )
     try:
         with urlopen(request, timeout=30, context=HTTPS_CONTEXT) as response:

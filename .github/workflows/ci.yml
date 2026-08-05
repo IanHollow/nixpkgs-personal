@@ -4,42 +4,70 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  merge_group:
+    types: [checks_requested]
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-permissions:
-  contents: read
+permissions: {}
 jobs:
+  flake-lock:
+    name: Flake lock (${{ matrix.lockfile }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lockfile: [flake.lock, flake/dev/flake.lock]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: DeterminateSystems/flake-checker-action@de924abd783455e8429c858962b9e43062d19da1 # v13
+        with:
+          fail-mode: true
+          flake-lock-path: ${{ matrix.lockfile }}
   lint:
-    name: Lint
+    name: Lint and security
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
-      - run: nix fmt -- --fail-on-change
-      - run: nix develop -c deadnix --fail .
-      - run: nix develop -c statix check .
-      - run: nix develop -c actionlint .github/workflows/*.yml
-      - run: nix develop -c ruff format --check .
-      - run: nix develop -c ruff check .
-      - run: nix develop -c ty check
-      - run: nix develop -c zizmor .github/workflows
+      - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      - name: Materialize partition source
+        run: nix store add-path flake/dev
+      - run: nix develop --command prek run --all-files
+      - run: nix develop --command gitleaks detect --source . --redact --config=.gitleaks.toml
   flake:
-    name: Flake checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    name: Flake checks (${{ matrix.system }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - system: aarch64-darwin
+            runner: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-      - uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
-      - run: nix flake check --all-systems --no-build
+      - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
+      - name: Materialize partition source
+        run: nix store add-path flake/dev
+      - run: nix flake check --keep-going --show-trace --print-build-logs --no-build --system "${{ matrix.system }}"
   build:
     name: Build (${{ matrix.system }})
     needs: [lint, flake]
@@ -55,14 +83,14 @@ jobs:
             runner: macos-14
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-      - if: matrix.system != 'aarch64-darwin'
-        uses: DeterminateSystems/magic-nix-cache-action@55718cd9ebf1737a061487d5ada21abf31e99a98 # main
+      - uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858 # v3.21.9
       - name: Build affected packages
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -93,5 +121,5 @@ jobs:
 
           while IFS= read -r package; do
             [[ -n "$package" ]] || continue
-            nix build ".#$package" --print-build-logs
+            nix build ".#$package" --keep-going --show-trace --print-build-logs
           done <<<"$targets"

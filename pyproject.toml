@@ -14,13 +14,7 @@ python-platform = "all"
 
 [tool.ty.src]
 include = ["**/*.py", "**/*.pyi"]
-exclude = [
-  ".git",
-  ".direnv",
-  ".ruff_cache",
-  "**/__pycache__",
-  "result",
-]
+exclude = [".git", ".direnv", ".ruff_cache", "**/__pycache__", "result"]
 
 [tool.ty.terminal]
 error-on-warning = true
