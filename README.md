@@ -10,7 +10,7 @@ Add the flake and make its `nixpkgs` input follow yours:
 
 ```nix
 inputs.nixpkgs-personal = {
-  url = "github:IanHollow/nixpkgs-personal";
+  url = "github:nix-forge/nixpkgs-personal";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 ```

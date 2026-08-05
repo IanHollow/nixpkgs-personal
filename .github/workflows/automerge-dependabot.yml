@@ -9,7 +9,7 @@ concurrency:
 jobs:
   enable:
     if: >-
-      github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'IanHollow/nixpkgs-personal' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false
+      github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'nix-forge/nixpkgs-personal' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
